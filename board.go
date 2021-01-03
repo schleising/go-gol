@@ -2,6 +2,7 @@ package main
 
 import (
 	"math/rand"
+	"time"
 )
 
 // BufferedBoard is the structure holding the two boards
@@ -24,10 +25,13 @@ func Initialise(rows int, cols int) *BufferedBoard {
 	boards.cols = cols
 	boards.currentBoard = make([]bool, rows*cols)
 	boards.nextBoard = make([]bool, rows*cols)
+	currentTimeAsSeed := time.Now().UnixNano()
+
+	random := rand.New(rand.NewSource(currentTimeAsSeed))
 
 	for row := 0; row < rows; row++ {
 		for col := 0; col < cols; col++ {
-			if rand.Intn(2) == 1 {
+			if random.Intn(2) == 1 {
 				boards.setAlive(row, col)
 			} else {
 				boards.setDead(row, col)
