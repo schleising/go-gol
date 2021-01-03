@@ -39,7 +39,7 @@ func Initialise(rows int, cols int) *BufferedBoard {
 }
 
 // Iterate calculates the state of the next frame
-func (b *BufferedBoard) Iterate(ch chan bool) {
+func (b *BufferedBoard) Iterate() {
 	for row := 0; row < b.rows; row++ {
 		for col := 0; col < b.cols; col++ {
 			b.calcNextState(row, col)
@@ -47,8 +47,6 @@ func (b *BufferedBoard) Iterate(ch chan bool) {
 	}
 
 	b.swap()
-
-	ch <- true
 }
 
 func (b *BufferedBoard) calcNextState(row, col int) {
