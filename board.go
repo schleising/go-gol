@@ -56,7 +56,7 @@ func (b *BufferedBoard) calcNextState(row, col int) {
 
 	for testRowDelta := -1; testRowDelta <= 1; testRowDelta++ {
 		for testColDelta := -1; testColDelta <= 1; testColDelta++ {
-			if testRowDelta != 0 && testColDelta != 0 {
+			if !(testRowDelta == 0 && testColDelta == 0) {
 				testRow := b.boundRows(row + testRowDelta)
 				testCol := b.boundCols(col + testColDelta)
 
