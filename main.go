@@ -63,7 +63,7 @@ func setupRenderLoop() {
 		window.Call("setTimeout", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			window.Call("requestAnimationFrame", renderJSCallback)
 			return nil
-		}), 2000)
+		}), 75)
 		return nil
 	})
 	window.Call("requestAnimationFrame", renderJSCallback)
