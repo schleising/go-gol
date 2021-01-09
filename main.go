@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"net/url"
+	"strconv"
 	"syscall/js"
 )
 
@@ -14,27 +16,36 @@ var (
 	windowSize struct{ width, height float64 }
 	random     *rand.Rand
 	newBoard   *BufferedBoard
+	messages   chan string
 )
 
 func main() {
+	messages = make(chan string)
+	go func() {
+		for message := range messages {
+			fmt.Println(message)
+		}
+	}()
+	messages <- "GoL::main"
 	newBoard = Initialise(25, 25)
 
-	setupCanvas()
-	setupRenderLoop()
+	frameInterval := setupCanvas()
+	setupRenderLoop(frameInterval)
 
+	messages <- "GoL::Running"
 	runForever := make(chan bool)
 	<-runForever
 }
 
-func setupCanvas() {
+func setupCanvas() int64 {
 	document := window.Get("document")
-	fmt.Println("Doc    : ", document)
 
 	canvas = document.Call("getElementById", "canvas")
 	context = canvas.Call("getContext", "2d")
 
-	fmt.Println("Canvas : ", canvas)
-	fmt.Println("Context: ", context)
+	pageURL := document.Get("location").Get("href").String()
+	params := parseURLQueryParams(pageURL)
+	messages <- fmt.Sprintf("WASM::setupCanvas Params: %+v", params)
 
 	updateWindowSizeJSCallback := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		resetWindowSize()
@@ -43,7 +54,31 @@ func setupCanvas() {
 	window.Call("addEventListener", "resize", updateWindowSizeJSCallback)
 	resetWindowSize()
 
-	fmt.Println("Setup Canvas")
+	messages <- "GoL::Setup Canvas"
+
+	return params["frameInterval"]
+}
+
+func parseURLQueryParams(pageURL string) map[string]int64 {
+	params := map[string]int64{
+		"frameInterval": 75,
+	}
+	parse, e := url.Parse(pageURL)
+	if e != nil {
+		return params
+	}
+	for paramKey, paramValues := range parse.Query() {
+		if len(paramValues) > 0 {
+			if value, e := strconv.ParseInt(paramValues[0], 10, 64); e == nil {
+				params[paramKey] = value
+				messages <- fmt.Sprintln("Key: ", paramKey)
+				messages <- fmt.Sprintln("Val: ", value)
+			} else {
+				params[paramKey] = -1
+			}
+		}
+	}
+	return params
 }
 
 func resetWindowSize() {
@@ -55,7 +90,7 @@ func resetWindowSize() {
 	canvas.Set("height", windowSize.height)
 }
 
-func setupRenderLoop() {
+func setupRenderLoop(frameInterval int64) {
 	var renderJSCallback js.Func
 	renderJSCallback = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		draw()
@@ -63,11 +98,11 @@ func setupRenderLoop() {
 		window.Call("setTimeout", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			window.Call("requestAnimationFrame", renderJSCallback)
 			return nil
-		}), 75)
+		}), frameInterval)
 		return nil
 	})
 	window.Call("requestAnimationFrame", renderJSCallback)
-	fmt.Println("Setup Render Loop")
+	messages <- "GoL::Setup Render Loop"
 }
 
 func draw() {
@@ -99,7 +134,6 @@ func update() {
 
 func clearCanvas() {
 	context.Call("clearRect", 0, 0, windowSize.width, windowSize.height)
-	fmt.Println("Clear: ", windowSize.width, windowSize.height)
 }
 
 func strokeStyle(style string) {
